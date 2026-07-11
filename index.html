@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Depósito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --bg-alt:#eef1f4;
+    --surface:#ffffff;
+    --surface-2:#f2f4f7;
+    --border:#e1e5ea;
+    --border-soft:#ebeef2;
+    --accent:#e2883f;
+    --accent-dim:#c97430;
+    --accent-soft:#fcecda;
+    --money-pos:#2f9e6a;
+    --money-pos-soft:#e5f6ed;
+    --money-neg:#e0574c;
+    --money-neg-soft:#fdecea;
+    --text:#28303a;
+    --text-dim:#69707c;
+    --text-faint:#98a0ab;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:14.5px;
+    line-height:1.55;
+    min-height:100vh;
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    letter-spacing:-0.01em;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:var(--accent-dim);}
+
+  /* ---------- layout shell ---------- */
+  #app{display:flex;min-height:100vh;}
+
+  .sidebar{
+    width:216px;
+    flex-shrink:0;
+    background:var(--surface);
+    border-right:1px solid var(--border-soft);
+    display:flex;
+    flex-direction:column;
+    padding:20px 14px;
+    position:sticky;
+    top:0;
+    height:100vh;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:4px 8px 20px 8px;
+    border-bottom:1px solid var(--border-soft);
+    margin-bottom:16px;
+  }
+  .brand svg{flex-shrink:0;}
+  .brand-text{display:flex;flex-direction:column;}
+  .brand-text b{font-family:'Space Grotesk';font-size:15px;color:var(--text);}
+  .brand-text span{font-size:11px;color:var(--text-faint);}
+
+  nav.tabs{display:flex;flex-direction:column;gap:4px;flex:1;}
+  .tab-btn{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 12px;
+    border-radius:9px;
+    border:1px solid transparent;
+    background:transparent;
+    color:var(--text-dim);
+    font-family:'Inter';font-size:13.5px;font-weight:500;
+    cursor:pointer;text-align:left;
+    transition:background .12s, color .12s;
+  }
+  .tab-btn svg{flex-shrink:0;opacity:.8;}
+  .tab-btn:hover{background:var(--surface-2);color:var(--text);}
+  .tab-btn.active{background:var(--accent-soft);color:var(--accent-dim);border-color:#f3d3ac;}
+  .tab-btn.active svg{opacity:1;}
+
+  .sidebar-foot{
+    border-top:1px solid var(--border-soft);
+    padding-top:12px;
+    margin-top:12px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .ghost-btn{
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
+    border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;font-family:'Inter';
+    display:flex;align-items:center;gap:7px;justify-content:flex-start;
+  }
+  .ghost-btn:hover{color:var(--text);border-color:var(--text-faint);background:#e9ecf0;}
+
+  main{flex:1;min-width:0;padding:26px 32px 60px 32px;}
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  .topbar h1{font-size:23px;margin:0;color:var(--text);}
+  .topbar .sub{color:var(--text-faint);font-size:12.5px;margin-top:2px;}
+  .period-box{
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:9px;padding:7px 12px;
+    box-shadow:0 1px 2px rgba(20,20,30,.04);
+  }
+  .period-box label{font-size:11px;color:var(--text-faint);}
+  .period-box input, .period-box select{
+    background:transparent;border:none;color:var(--text);font-family:'IBM Plex Mono';font-size:13px;
+  }
+  .period-box button{
+    background:transparent;border:none;color:var(--accent-dim);font-size:11.5px;cursor:pointer;font-family:'Inter';padding:2px 4px;
+  }
+
+  section.tab-panel{display:none;}
+  section.tab-panel.active{display:block;animation:fade .15s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+
+  /* ---------- stat / tag cards ---------- */
+  .stat-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:14px;margin-bottom:24px;
+  }
+  .tag-card{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-top:3px solid var(--accent);
+    border-radius:var(--radius);
+    padding:16px 16px 14px 16px;
+    box-shadow:0 1px 3px rgba(20,20,30,.05);
+  }
+  .tag-card.pos{border-top-color:var(--money-pos);}
+  .tag-card.neg{border-top-color:var(--money-neg);}
+  .tag-card .label{font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+  .tag-card .value{font-family:'IBM Plex Mono';font-size:22px;font-weight:600;margin-top:6px;color:var(--text);}
+  .tag-card .value.pos{color:var(--money-pos);}
+  .tag-card .value.neg{color:var(--money-neg);}
+  .tag-card .hint{font-size:11px;color:var(--text-faint);margin-top:4px;}
+
+  /* ---------- panels / cards ---------- */
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    margin-bottom:20px;
+    box-shadow:0 1px 3px rgba(20,20,30,.04);
+  }
+  .panel h2{font-size:15.5px;margin:0 0 14px 0;color:var(--text);display:flex;align-items:center;gap:8px;}
+  .panel h2 small{font-size:11.5px;color:var(--text-faint);font-weight:400;font-family:'Inter';}
+  .two-col{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;}
+  @media(max-width:980px){.two-col{grid-template-columns:1fr;}}
+
+  form.grid-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;align-items:end;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:11.5px;color:var(--text-dim);font-weight:500;}
+  .field input, .field select, .field textarea{
+    background:var(--bg-alt);border:1px solid var(--border);color:var(--text);
+    border-radius:7px;padding:8px 9px;font-family:'Inter';font-size:13px;width:100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+  .field.checkline{flex-direction:row;align-items:center;gap:8px;padding-bottom:8px;}
+  .field.checkline input{width:auto;}
+
+  .btn{
+    background:var(--accent);color:#ffffff;border:none;border-radius:8px;
+    padding:9px 16px;font-family:'Inter';font-weight:600;font-size:13px;cursor:pointer;
+  }
+  .btn:hover{background:var(--accent-dim);}
+  .btn.secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--border);}
+  .btn.secondary:hover{border-color:var(--text-faint);}
+  .btn.danger{background:var(--money-neg-soft);color:var(--money-neg);border:1px solid #f3cfcb;}
+  .btn.danger:hover{background:#fbdedb;}
+  .btn.small{padding:5px 10px;font-size:12px;border-radius:6px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--text-faint);border-bottom:1px solid var(--border);padding:8px 8px;font-weight:600;
+  }
+  tbody td{padding:9px 8px;border-bottom:1px solid var(--border-soft);color:var(--text);}
+  tbody tr:hover{background:var(--bg-alt);}
+  td.num, th.num{text-align:right;font-family:'IBM Plex Mono';}
+  .table-wrap{overflow-x:auto;}
+  .empty-row td{color:var(--text-faint);text-align:center;padding:22px 0;font-style:italic;}
+
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+  .pill.amber{background:var(--accent-soft);color:var(--accent-dim);}
+  .pill.green{background:var(--money-pos-soft);color:var(--money-pos);}
+  .pill.red{background:var(--money-neg-soft);color:var(--money-neg);}
+  .pill.gray{background:var(--surface-2);color:var(--text-dim);}
+
+  .row-actions{display:flex;gap:6px;}
+  .icon-btn{
+    background:var(--surface);border:1px solid var(--border);color:var(--text-dim);
+    border-radius:7px;width:27px;height:27px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .icon-btn:hover{border-color:var(--text-faint);color:var(--text);background:var(--surface-2);}
+  .icon-btn.danger:hover{border-color:var(--money-neg);color:var(--money-neg);background:var(--money-neg-soft);}
+
+  .bar-compare{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+  .bar-row{display:grid;grid-template-columns:90px 1fr 90px;align-items:center;gap:10px;}
+  .bar-row .bar-label{font-size:12px;color:var(--text-dim);}
+  .bar-track{background:var(--bg-alt);border-radius:6px;height:14px;overflow:hidden;border:1px solid var(--border-soft);}
+  .bar-fill{height:100%;border-radius:6px 0 0 6px;}
+  .bar-row .bar-val{font-family:'IBM Plex Mono';font-size:12px;text-align:right;}
+
+  .low-stock-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-soft);font-size:13px;}
+  .low-stock-item:last-child{border-bottom:none;}
+
+  .toast{
+    position:fixed;bottom:20px;right:20px;background:var(--text);border:1px solid var(--text);
+    color:#fff;padding:10px 16px;border-radius:9px;font-size:13px;box-shadow:0 6px 18px rgba(20,20,30,.18);
+    opacity:0;transform:translateY(8px);transition:opacity .2s, transform .2s;pointer-events:none;z-index:50;
+  }
+  .toast.show{opacity:1;transform:none;}
+
+  .subtle-note{font-size:11.5px;color:var(--text-faint);margin-top:8px;}
+
+  input[type="file"]{display:none;}
+
+  /* ---------- filtros ---------- */
+  .filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  .filter-bar input, .filter-bar select{
+    background:var(--bg-alt);border:1px solid var(--border);color:var(--text);
+    border-radius:7px;padding:7px 10px;font-family:'Inter';font-size:12.5px;
+  }
+  .filter-bar input[type="search"]{min-width:180px;flex:1;}
+
+  /* ---------- deltas ---------- */
+  .delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:1px 7px;border-radius:20px;margin-top:6px;}
+  .delta.up{background:var(--money-pos-soft);color:var(--money-pos);}
+  .delta.down{background:var(--money-neg-soft);color:var(--money-neg);}
+  .delta.flat{background:var(--surface-2);color:var(--text-faint);}
+
+  /* ---------- ajustes / sync ---------- */
+  .code-block{
+    background:var(--bg-alt);border:1px solid var(--border);border-radius:8px;
+    padding:12px 14px;font-family:'IBM Plex Mono';font-size:12px;color:var(--text-dim);
+    white-space:pre-wrap;overflow-x:auto;line-height:1.6;
+  }
+  .status-line{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);margin-top:10px;}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-faint);flex-shrink:0;}
+  .status-dot.on{background:var(--money-pos);}
+  .status-dot.off{background:var(--money-neg);}
+
+  @media(max-width:860px){
+    #app{flex-direction:column;}
+    .sidebar{width:100%;height:auto;position:relative;flex-direction:row;overflow-x:auto;align-items:center;padding:12px;}
+    .brand{border-bottom:none;padding:0 12px 0 0;margin:0;border-right:1px solid var(--border-soft);}
+    nav.tabs{flex-direction:row;flex:none;}
+    .sidebar-foot{border-top:none;margin:0 0 0 8px;padding:0;flex-direction:row;}
+    main{padding:18px;}
+  }
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3 8L12 3L21 8V17L12 22L3 17V8Z" stroke="#e2883f" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 8L12 13L21 8" stroke="#e2883f" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 13V22" stroke="#e2883f" stroke-width="1.6"/></svg>
+      <div class="brand-text"><b>Depósito</b><span>control &amp; caja</span></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="3" width="8" height="5" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="13" y="11" width="8" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="8" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        Panel
+      </button>
+      <button class="tab-btn" data-tab="stock">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 7L12 3L21 7V17L12 21L3 17V7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7L12 11L21 7" stroke="currentColor" stroke-width="1.6"/><path d="M12 11V21" stroke="currentColor" stroke-width="1.6"/></svg>
+        Stock
+      </button>
+      <button class="tab-btn" data-tab="ventas">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="20" r="1.4" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="20" r="1.4" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 3H5L7.4 14.6C7.6 15.5 8.4 16.1 9.3 16.1H17.6C18.5 16.1 19.3 15.5 19.5 14.6L21 7H6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Ventas
+      </button>
+      <button class="tab-btn" data-tab="finanzas">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="13" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 10H21.5" stroke="currentColor" stroke-width="1.6"/><path d="M6 14.5H10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Finanzas
+      </button>
+      <button class="tab-btn" data-tab="tiempos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7V12L15.5 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Tiempos
+      </button>
+      <button class="tab-btn" data-tab="ajustes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5C19.5 13 19.5 12.5 19.4 12L21 10.5L19.5 8L17.6 8.6C17.2 8.2 16.7 7.9 16.2 7.7L15.8 5.8H12.2L11.8 7.7C11.3 7.9 10.8 8.2 10.4 8.6L8.5 8L7 10.5L8.6 12C8.5 12.5 8.5 13 8.6 13.5L7 15L8.5 17.5L10.4 16.9C10.8 17.3 11.3 17.6 11.8 17.8L12.2 19.7H15.8L16.2 17.8C16.7 17.6 17.2 17.3 17.6 16.9L19.5 17.5L21 15L19.4 13.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        Ajustes
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="ghost-btn" id="btnExport">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3V15M12 15L7 10M12 15L17 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Exportar backup
+      </button>
+      <button class="ghost-btn" id="btnImportTrigger">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 15V3M12 3L7 8M12 3L17 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Importar backup
+      </button>
+      <input type="file" id="fileImport" accept="application/json">
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Panel general</h1>
+        <div class="sub" id="pageSub">Resumen de tu depósito y tu caja</div>
+      </div>
+      <div class="period-box">
+        <label>Período</label>
+        <select id="periodMode">
+          <option value="todo">Todo</option>
+          <option value="mes" selected>Mes</option>
+        </select>
+        <input type="month" id="periodMonth">
+      </div>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="tab-panel active" id="tab-dashboard">
+      <div class="stat-grid" id="dashStats"></div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h2>Ingresos vs. egresos <small>del período seleccionado</small></h2>
+          <div class="bar-compare" id="dashBars"></div>
+        </div>
+        <div class="panel">
+          <h2>Stock bajo <small>productos en o debajo del mínimo</small></h2>
+          <div id="dashLowStock"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Evolución mensual <small>balance neto de los últimos 6 meses</small></h2>
+        <div class="bar-compare" id="dashEvolucion"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Últimos movimientos <small>ventas, finanzas y stock recientes</small></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th class="num">Monto</th></tr></thead>
+            <tbody id="dashRecent"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ STOCK ============ -->
+    <section class="tab-panel" id="tab-stock">
+      <div class="panel">
+        <h2 id="prodFormTitle">Nuevo producto</h2>
+        <form class="grid-form" id="formProducto">
+          <input type="hidden" id="prodId">
+          <div class="field"><label>Nombre</label><input type="text" id="prodNombre" required></div>
+          <div class="field"><label>Categoría</label><input type="text" id="prodCategoria" placeholder="Opcional"></div>
+          <div class="field"><label>Precio costo</label><input type="number" id="prodCosto" min="0" step="0.01" required></div>
+          <div class="field"><label>Precio venta</label><input type="number" id="prodPrecioVenta" min="0" step="0.01" required></div>
+          <div class="field"><label>Stock inicial</label><input type="number" id="prodStock" min="0" step="1" required></div>
+          <div class="field"><label>Stock mínimo</label><input type="number" id="prodStockMin" min="0" step="1" value="0"></div>
+          <div class="field" style="flex-direction:row;gap:8px;">
+            <button type="submit" class="btn">Guardar producto</button>
+            <button type="button" class="btn secondary" id="btnCancelProd" style="display:none;">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Productos en depósito</h2>
+        <div class="filter-bar">
+          <input type="search" id="prodBuscar" placeholder="Buscar por nombre o categoría...">
+          <select id="prodFiltroCategoria"><option value="">Todas las categorías</option></select>
+          <select id="prodOrden">
+            <option value="nombre">Ordenar: nombre</option>
+            <option value="stockAsc">Ordenar: stock (menor a mayor)</option>
+            <option value="margenDesc">Ordenar: margen (mayor a menor)</option>
+            <option value="valorDesc">Ordenar: valor en stock (mayor a menor)</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Producto</th><th>Categoría</th><th class="num">Costo</th><th class="num">Venta</th>
+              <th class="num">Margen</th><th class="num">Stock</th><th class="num">Mínimo</th><th class="num">Valor stock</th><th></th>
+            </tr></thead>
+            <tbody id="tablaProductos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Movimiento de stock <small>entradas y salidas manuales — compras, ajustes, mermas, devoluciones</small></h2>
+        <form class="grid-form" id="formMovimiento">
+          <div class="field"><label>Producto</label><select id="movProducto" required></select></div>
+          <div class="field"><label>Tipo</label>
+            <select id="movTipo">
+              <option value="entrada">Entrada</option>
+              <option value="salida">Salida</option>
+            </select>
+          </div>
+          <div class="field"><label>Cantidad</label><input type="number" id="movCantidad" min="1" step="1" required></div>
+          <div class="field"><label>Motivo</label>
+            <select id="movMotivo">
+              <option>Compra</option>
+              <option>Ajuste de inventario</option>
+              <option>Merma / rotura</option>
+              <option>Devolución</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div class="field"><label>Fecha</label><input type="date" id="movFecha" required></div>
+          <div class="field"><button type="submit" class="btn">Registrar</button></div>
+        </form>
+        <div class="table-wrap" style="margin-top:14px;">
+          <table>
+            <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Motivo</th><th class="num">Cantidad</th><th></th></tr></thead>
+            <tbody id="tablaMovimientos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VENTAS ============ -->
+    <section class="tab-panel" id="tab-ventas">
+      <div class="panel">
+        <h2>Registrar venta</h2>
+        <form class="grid-form" id="formVenta">
+          <div class="field"><label>Fecha</label><input type="date" id="ventaFecha" required></div>
+          <div class="field"><label>Producto</label><select id="ventaProducto" required></select></div>
+          <div class="field"><label>Cantidad</label><input type="number" id="ventaCantidad" min="1" step="1" required></div>
+          <div class="field"><label>Precio unitario</label><input type="number" id="ventaPrecio" min="0" step="0.01" required></div>
+          <div class="field checkline"><input type="checkbox" id="ventaTercerizada"><label>Venta tercerizada</label></div>
+          <div class="field" id="campoTercero" style="display:none;"><label>Vendedor / tercero</label><input type="text" id="ventaTerceroNombre" list="listaTerceros" placeholder="Escribí o elegí uno existente"><datalist id="listaTerceros"></datalist></div>
+          <div class="field" id="campoComision" style="display:none;"><label>Comisión (%)</label><input type="number" id="ventaComisionPct" min="0" max="100" step="0.5" value="0"></div>
+          <div class="field"><button type="submit" class="btn">Registrar venta</button></div>
+        </form>
+        <div class="subtle-note">Al guardar, la venta descuenta el stock del producto automáticamente y calcula la ganancia neta (precio − costo − comisión).</div>
+      </div>
+
+      <div class="stat-grid" id="ventasStats"></div>
+
+      <div class="panel">
+        <h2>Comisiones por tercero <small>del período seleccionado</small></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tercero</th><th class="num">Ventas</th><th class="num">Total vendido</th><th class="num">Comisión total</th></tr></thead>
+            <tbody id="tablaComisiones"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Historial de ventas <small style="cursor:pointer;text-decoration:underline;" id="btnExportVentasCsv">exportar CSV</small></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>Producto</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th>
+              <th>Tipo</th><th class="num">Comisión</th><th class="num">Ganancia</th><th></th>
+            </tr></thead>
+            <tbody id="tablaVentas"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FINANZAS ============ -->
+    <section class="tab-panel" id="tab-finanzas">
+      <div class="panel">
+        <h2>Nuevo movimiento financiero</h2>
+        <form class="grid-form" id="formFinanza">
+          <div class="field"><label>Fecha</label><input type="date" id="finFecha" required></div>
+          <div class="field"><label>Tipo</label>
+            <select id="finTipo">
+              <option value="ingreso">Ingreso</option>
+              <option value="egreso">Egreso</option>
+              <option value="inversion">Inversión</option>
+              <option value="perdida">Pérdida</option>
+            </select>
+          </div>
+          <div class="field"><label>Concepto</label><input type="text" id="finConcepto" placeholder="Ej: alquiler, insumos..." required></div>
+          <div class="field"><label>Monto</label><input type="number" id="finMonto" min="0" step="0.01" required></div>
+          <div class="field"><button type="submit" class="btn">Registrar</button></div>
+        </form>
+        <div class="subtle-note">Este registro es para movimientos de caja generales (alquiler, sueldos, compra de equipamiento, robos, etc). Las ventas se suman aparte, en la pestaña Ventas.</div>
+      </div>
+
+      <div class="stat-grid" id="finStats"></div>
+
+      <div class="panel">
+        <h2>Movimientos <small style="cursor:pointer;text-decoration:underline;" id="btnExportFinanzasCsv">exportar CSV</small></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th class="num">Monto</th><th></th></tr></thead>
+            <tbody id="tablaFinanzas"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TIEMPOS ============ -->
+    <section class="tab-panel" id="tab-tiempos">
+      <div class="panel">
+        <h2>Registrar jornada</h2>
+        <form class="grid-form" id="formTiempo">
+          <div class="field"><label>Fecha</label><input type="date" id="tFecha" required></div>
+          <div class="field"><label>Hora de ingreso</label><input type="time" id="tIngreso" required></div>
+          <div class="field"><label>Hora de egreso</label><input type="time" id="tEgreso" required></div>
+          <div class="field"><label>Tarea / nota</label><input type="text" id="tTarea" placeholder="Opcional"></div>
+          <div class="field"><button type="submit" class="btn">Registrar</button></div>
+        </form>
+      </div>
+
+      <div class="stat-grid" id="tiempoStats"></div>
+
+      <div class="panel">
+        <h2>Jornadas registradas</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Ingreso</th><th>Egreso</th><th class="num">Horas</th><th>Tarea</th><th></th></tr></thead>
+            <tbody id="tablaTiempos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AJUSTES ============ -->
+    <section class="tab-panel" id="tab-ajustes">
+      <div class="panel">
+        <h2>Sincronización entre dispositivos <small>opcional, usando una base Supabase</small></h2>
+        <p class="subtle-note" style="margin-top:0;">Por defecto todos los datos quedan guardados solo en este navegador. Si querés ver lo mismo desde el celular y la computadora, podés conectar una base de Supabase gratuita. Es opcional: si no la configurás, la app sigue funcionando igual que ahora, solo local.</p>
+        <form class="grid-form" id="formSync" style="margin-top:12px;">
+          <div class="field"><label>URL del proyecto Supabase</label><input type="text" id="syncUrl" placeholder="https://xxxx.supabase.co"></div>
+          <div class="field"><label>Clave anon (pública)</label><input type="text" id="syncKey" placeholder="eyJhbGc..."></div>
+          <div class="field"><label>Código de espacio</label><input type="text" id="syncCodigo" placeholder="ej: deposito-pepe"></div>
+          <div class="field checkline"><input type="checkbox" id="syncAuto"><label>Sincronizar automáticamente al guardar</label></div>
+          <div class="field" style="flex-direction:row;gap:8px;">
+            <button type="submit" class="btn">Guardar configuración</button>
+          </div>
+        </form>
+        <div class="status-line"><span class="status-dot" id="syncStatusDot"></span><span id="syncStatusText">Sin configurar todavía</span></div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <button class="btn secondary" id="btnSyncPush">Subir mis datos al servidor</button>
+          <button class="btn secondary" id="btnSyncPull">Traer datos del servidor</button>
+        </div>
+        <div class="subtle-note">"Subir" reemplaza lo que hay en el servidor con lo que ves en este dispositivo. "Traer" hace lo opuesto: reemplaza lo de este dispositivo con lo del servidor. Usalos con cuidado si estás sincronizando desde dos lugares a la vez.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Cómo crear la tabla en Supabase <small>pegar una sola vez en el SQL Editor de tu proyecto</small></h2>
+        <div class="code-block">create table deposito_sync (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
+alter table deposito_sync enable row level security;
+
+create policy "acceso por codigo de espacio"
+on deposito_sync for all
+using (true) with check (true);</div>
+        <p class="subtle-note">Esta política deja leer y escribir a cualquiera que tenga la URL, la clave anon y el código de espacio exactos — como una contraseña compartida. Sirve para uso personal entre tus propios dispositivos; no compartas esos tres datos.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   ESTADO Y PERSISTENCIA
+   ============================================================ */
+const STORAGE_KEY = 'deposito_app_v1';
+
+function defaultState(){
+  return { productos: [], movimientos: [], ventas: [], finanzas: [], tiempos: [], terceros: [] };
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultState(), parsed);
+  }catch(e){
+    console.error('Error leyendo datos guardados', e);
+    return defaultState();
+  }
+}
+
+function saveState(skipAutoSync){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if(!skipAutoSync && typeof syncConfig !== 'undefined' && syncConfig && syncConfig.auto){
+    clearTimeout(syncPushTimer);
+    syncPushTimer = setTimeout(()=>pushToSupabase(true), 1500);
+  }
+}
+
+let state = loadState();
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function uid(){
+  return 'id_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+function todayISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+function fmtMoney(n){
+  n = Number(n)||0;
+  return n.toLocaleString('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0});
+}
+function fmtDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function monthOf(iso){
+  return (iso||'').slice(0,7); // YYYY-MM
+}
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function getProducto(id){
+  return state.productos.find(p=>p.id===id);
+}
+
+/* period filter: returns {mode:'todo'|'mes', month:'YYYY-MM'} */
+function getPeriod(){
+  const mode = document.getElementById('periodMode').value;
+  const month = document.getElementById('periodMonth').value;
+  return {mode, month};
+}
+function inPeriod(iso){
+  const {mode, month} = getPeriod();
+  if(mode==='todo') return true;
+  if(!month) return true;
+  return monthOf(iso) === month;
+}
+
+/* ============================================================
+   NAVEGACIÓN DE PESTAÑAS
+   ============================================================ */
+const titles = {
+  dashboard: ['Panel general', 'Resumen de tu depósito y tu caja'],
+  stock: ['Stock', 'Productos, cantidades y movimientos de depósito'],
+  ventas: ['Ventas', 'Ventas propias y tercerizadas'],
+  finanzas: ['Finanzas', 'Ingresos, egresos, inversión y pérdidas'],
+  tiempos: ['Tiempos', 'Horas de ingreso, egreso y trabajo'],
+  ajustes: ['Ajustes', 'Backup y sincronización entre dispositivos'],
+};
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('tab-'+tab).classList.add('active');
+    document.getElementById('pageTitle').textContent = titles[tab][0];
+    document.getElementById('pageSub').textContent = titles[tab][1];
+    renderAll();
+  });
+});
+
+document.getElementById('periodMode').addEventListener('change', renderAll);
+document.getElementById('periodMonth').addEventListener('change', renderAll);
+(function initPeriod(){
+  document.getElementById('periodMonth').value = todayISO().slice(0,7);
+})();
+
+/* ============================================================
+   STOCK — PRODUCTOS
+   ============================================================ */
+const formProducto = document.getElementById('formProducto');
+document.getElementById('prodStock').disabled = false;
+
+formProducto.addEventListener('submit', e=>{
+  e.preventDefault();
+  const id = document.getElementById('prodId').value;
+  const nombre = document.getElementById('prodNombre').value.trim();
+  const categoria = document.getElementById('prodCategoria').value.trim();
+  const costo = parseFloat(document.getElementById('prodCosto').value)||0;
+  const precioVenta = parseFloat(document.getElementById('prodPrecioVenta').value)||0;
+  const stock = parseInt(document.getElementById('prodStock').value)||0;
+  const stockMin = parseInt(document.getElementById('prodStockMin').value)||0;
+
+  if(id){
+    const p = getProducto(id);
+    if(p){
+      p.nombre=nombre; p.categoria=categoria; p.costo=costo; p.precioVenta=precioVenta; p.stockMin=stockMin;
+      // el stock en edición no se toca directo: se maneja por movimientos, salvo que lo editen aquí explícitamente
+      p.stock = stock;
+    }
+    showToast('Producto actualizado');
+  }else{
+    state.productos.push({id:uid(), nombre, categoria, costo, precioVenta, stock, stockMin});
+    showToast('Producto agregado');
+  }
+  saveState();
+  resetFormProducto();
+  renderAll();
+});
+
+document.getElementById('btnCancelProd').addEventListener('click', resetFormProducto);
+
+function resetFormProducto(){
+  formProducto.reset();
+  document.getElementById('prodId').value = '';
+  document.getElementById('prodFormTitle').textContent = 'Nuevo producto';
+  document.getElementById('btnCancelProd').style.display = 'none';
+}
+
+function editProducto(id){
+  const p = getProducto(id);
+  if(!p) return;
+  document.getElementById('prodId').value = p.id;
+  document.getElementById('prodNombre').value = p.nombre;
+  document.getElementById('prodCategoria').value = p.categoria||'';
+  document.getElementById('prodCosto').value = p.costo;
+  document.getElementById('prodPrecioVenta').value = p.precioVenta;
+  document.getElementById('prodStock').value = p.stock;
+  document.getElementById('prodStockMin').value = p.stockMin||0;
+  document.getElementById('prodFormTitle').textContent = 'Editar producto';
+  document.getElementById('btnCancelProd').style.display = 'inline-block';
+  document.getElementById('tab-stock').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function deleteProducto(id){
+  if(!confirm('¿Eliminar este producto? También se perderá su historial de movimientos asociado.')) return;
+  state.productos = state.productos.filter(p=>p.id!==id);
+  state.movimientos = state.movimientos.filter(m=>m.productoId!==id);
+  saveState();
+  renderAll();
+  showToast('Producto eliminado');
+}
+
+function margenPct(p){
+  if(!p.precioVenta) return 0;
+  return ((p.precioVenta - p.costo) / p.precioVenta) * 100;
+}
+
+function margenPillClass(m){
+  if(m < 10) return 'red';
+  if(m < 30) return 'amber';
+  return 'green';
+}
+
+function renderTablaProductos(){
+  const tbody = document.getElementById('tablaProductos');
+  if(state.productos.length===0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Todavía no cargaste productos</td></tr>';
+    return;
+  }
+
+  const buscar = (document.getElementById('prodBuscar').value||'').toLowerCase().trim();
+  const filtroCat = document.getElementById('prodFiltroCategoria').value;
+  const orden = document.getElementById('prodOrden').value;
+
+  let lista = state.productos.filter(p=>{
+    const matchTexto = !buscar || p.nombre.toLowerCase().includes(buscar) || (p.categoria||'').toLowerCase().includes(buscar);
+    const matchCat = !filtroCat || p.categoria === filtroCat;
+    return matchTexto && matchCat;
+  });
+
+  if(orden==='stockAsc') lista = lista.slice().sort((a,b)=>a.stock-b.stock);
+  else if(orden==='margenDesc') lista = lista.slice().sort((a,b)=>margenPct(b)-margenPct(a));
+  else if(orden==='valorDesc') lista = lista.slice().sort((a,b)=>(b.costo*b.stock)-(a.costo*a.stock));
+  else lista = lista.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
+
+  if(lista.length===0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Ningún producto coincide con el filtro</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = lista.map(p=>{
+    const bajo = p.stock <= (p.stockMin||0);
+    const m = margenPct(p);
+    return `<tr>
+      <td>${escapeHtml(p.nombre)}</td>
+      <td>${escapeHtml(p.categoria||'—')}</td>
+      <td class="num">${fmtMoney(p.costo)}</td>
+      <td class="num">${fmtMoney(p.precioVenta)}</td>
+      <td class="num"><span class="pill ${margenPillClass(m)}">${m.toFixed(0)}%</span></td>
+      <td class="num">${bajo?'<span class="pill red">'+p.stock+'</span>':p.stock}</td>
+      <td class="num">${p.stockMin||0}</td>
+      <td class="num">${fmtMoney(p.costo*p.stock)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn" title="Editar" onclick="editProducto('${p.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M4 20L4.5 16.5L15.5 5.5C16.3 4.7 17.6 4.7 18.4 5.5C19.2 6.3 19.2 7.6 18.4 8.4L7.4 19.4L4 20Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Eliminar" onclick="deleteProducto('${p.id}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 7H19M9 7V5C9 4.4 9.4 4 10 4H14C14.6 4 15 4.4 15 5V7M17 7L16.3 19C16.2 19.6 15.7 20 15.1 20H8.9C8.3 20 7.8 19.6 7.7 19L7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function refreshProductoSelects(){
+  const opts = state.productos.map(p=>`<option value="${p.id}">${escapeHtml(p.nombre)} (stock: ${p.stock})</option>`).join('');
+  const placeholder = '<option value="" disabled selected>Elegí un producto</option>';
+  ['movProducto','ventaProducto'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = placeholder + opts;
+    if(current) sel.value = current;
+  });
+
+  const catSelect = document.getElementById('prodFiltroCategoria');
+  const categorias = [...new Set(state.productos.map(p=>p.categoria).filter(Boolean))].sort();
+  const currentCat = catSelect.value;
+  catSelect.innerHTML = '<option value="">Todas las categorías</option>' + categorias.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  if(currentCat) catSelect.value = currentCat;
+
+  const listaTerceros = [...new Set([...state.terceros, ...state.ventas.filter(v=>v.tercero).map(v=>v.tercero)])].sort();
+  document.getElementById('listaTerceros').innerHTML = listaTerceros.map(t=>`<option value="${escapeHtml(t)}"></option>`).join('');
+}
+
+document.getElementById('prodBuscar').addEventListener('input', renderTablaProductos);
+document.getElementById('prodFiltroCategoria').addEventListener('change', renderTablaProductos);
+document.getElementById('prodOrden').addEventListener('change', renderTablaProductos);
+
+/* ---------- movimientos de stock ---------- */
+document.getElementById('movFecha').value = todayISO();
+const formMovimiento = document.getElementById('formMovimiento');
+formMovimiento.addEventListener('submit', e=>{
+  e.preventDefault();
+  const productoId = document.getElementById('movProducto').value;
+  const tipo = document.getElementById('movTipo').value;
+  const cantidad = parseInt(document.getElementById('movCantidad').value)||0;
+  const motivo = document.getElementById('movMotivo').value;
+  const fecha = document.getElementById('movFecha').value;
+  if(!productoId || cantidad<=0) return;
+
+  const p = getProducto(productoId);
+  if(!p) return;
+  if(tipo==='salida' && cantidad > p.stock){
+    if(!confirm('La cantidad supera el stock actual ('+p.stock+'). ¿Registrar igual?')) return;
+  }
+  p.stock += (tipo==='entrada' ? cantidad : -cantidad);
+
+  state.movimientos.unshift({id:uid(), productoId, tipo, cantidad, motivo, fecha});
+  saveState();
+  formMovimiento.reset();
+  document.getElementById('movFecha').value = todayISO();
+  renderAll();
+  showToast('Movimiento registrado');
+});
+
+function deleteMovimiento(id){
+  const mov = state.movimientos.find(m=>m.id===id);
+  if(!mov) return;
+  if(!confirm('¿Eliminar este movimiento? El stock del producto se ajustará de vuelta.')) return;
+  const p = getProducto(mov.productoId);
+  if(p){
+    p.stock += (mov.tipo==='entrada' ? -mov.cantidad : mov.cantidad);
+  }
+  state.movimientos = state.movimientos.filter(m=>m.id!==id);
+  saveState();
+  renderAll();
+  showToast('Movimiento eliminado');
+}
+
+function renderTablaMovimientos(){
+  const tbody = document.getElementById('tablaMovimientos');
+  if(state.movimientos.length===0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Sin movimientos de stock todavía</td></tr>';
+    return;
+  }
+  tbody.innerHTML = state.movimientos.slice(0,60).map(m=>{
+    const p = getProducto(m.productoId);
+    const pillClass = m.tipo==='entrada' ? 'green' : 'red';
+    const signo = m.tipo==='entrada' ? '+' : '−';
+    return `<tr>
+      <td class="mono">${fmtDate(m.fecha)}</td>
+      <td>${p ? escapeHtml(p.nombre) : '<em>producto eliminado</em>'}</td>
+      <td><span class="pill ${pillClass}">${m.tipo}</span></td>
+      <td>${escapeHtml(m.motivo||'')}</td>
+      <td class="num">${signo}${m.cantidad}</td>
+      <td><button class="icon-btn danger" title="Eliminar" onclick="deleteMovimiento('${m.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 7H19M9 7V5C9 4.4 9.4 4 10 4H14C14.6 4 15 4.4 15 5V7M17 7L16.3 19C16.2 19.6 15.7 20 15.1 20H8.9C8.3 20 7.8 19.6 7.7 19L7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============================================================
+   VENTAS
+   ============================================================ */
+document.getElementById('ventaFecha').value = todayISO();
+
+document.getElementById('ventaProducto').addEventListener('change', ()=>{
+  const p = getProducto(document.getElementById('ventaProducto').value);
+  if(p) document.getElementById('ventaPrecio').value = p.precioVenta;
+});
+
+document.getElementById('ventaTercerizada').addEventListener('change', function(){
+  const show = this.checked;
+  document.getElementById('campoTercero').style.display = show ? 'flex' : 'none';
+  document.getElementById('campoComision').style.display = show ? 'flex' : 'none';
+});
+
+const formVenta = document.getElementById('formVenta');
+formVenta.addEventListener('submit', e=>{
+  e.preventDefault();
+  const productoId = document.getElementById('ventaProducto').value;
+  const p = getProducto(productoId);
+  if(!p){ showToast('Elegí un producto válido'); return; }
+
+  const cantidad = parseInt(document.getElementById('ventaCantidad').value)||0;
+  const precioUnitario = parseFloat(document.getElementById('ventaPrecio').value)||0;
+  const tercerizada = document.getElementById('ventaTercerizada').checked;
+  const tercero = document.getElementById('ventaTerceroNombre').value.trim();
+  const comisionPct = tercerizada ? (parseFloat(document.getElementById('ventaComisionPct').value)||0) : 0;
+  const fecha = document.getElementById('ventaFecha').value;
+
+  if(cantidad<=0){ showToast('Cantidad inválida'); return; }
+  if(cantidad > p.stock){
+    if(!confirm('La cantidad supera el stock disponible ('+p.stock+'). ¿Registrar la venta igual?')) return;
+  }
+
+  const total = precioUnitario * cantidad;
+  const costoTotal = p.costo * cantidad;
+  const comision = total * (comisionPct/100);
+  const ganancia = total - costoTotal - comision;
+
+  state.ventas.unshift({
+    id:uid(), fecha, productoId, productoNombre:p.nombre, cantidad, precioUnitario,
+    total, costoTotal, tercerizada, tercero, comisionPct, comision, ganancia
+  });
+
+  p.stock -= cantidad;
+  state.movimientos.unshift({id:uid(), productoId, tipo:'salida', cantidad, motivo:'Venta', fecha});
+
+  if(tercerizada && tercero && !state.terceros.includes(tercero)){
+    state.terceros.push(tercero);
+  }
+
+  saveState();
+  formVenta.reset();
+  document.getElementById('ventaFecha').value = todayISO();
+  document.getElementById('campoTercero').style.display='none';
+  document.getElementById('campoComision').style.display='none';
+  renderAll();
+  showToast('Venta registrada');
+});
+
+function deleteVenta(id){
+  const v = state.ventas.find(x=>x.id===id);
+  if(!v) return;
+  if(!confirm('¿Eliminar esta venta? El stock del producto se repondrá.')) return;
+  const p = getProducto(v.productoId);
+  if(p) p.stock += v.cantidad;
+  state.ventas = state.ventas.filter(x=>x.id!==id);
+  saveState();
+  renderAll();
+  showToast('Venta eliminada');
+}
+
+function renderTablaVentas(){
+  const tbody = document.getElementById('tablaVentas');
+  const ventas = state.ventas.filter(v=>inPeriod(v.fecha));
+  if(ventas.length===0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Sin ventas en el período seleccionado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = ventas.map(v=>{
+    const tipoPill = v.tercerizada ? `<span class="pill amber">tercerizada${v.tercero? ' · '+escapeHtml(v.tercero):''}</span>` : `<span class="pill gray">propia</span>`;
+    const gananciaClass = v.ganancia >= 0 ? 'pos' : 'neg';
+    return `<tr>
+      <td class="mono">${fmtDate(v.fecha)}</td>
+      <td>${escapeHtml(v.productoNombre||'')}</td>
+      <td class="num">${v.cantidad}</td>
+      <td class="num">${fmtMoney(v.precioUnitario)}</td>
+      <td class="num">${fmtMoney(v.total)}</td>
+      <td>${tipoPill}</td>
+      <td class="num">${v.comision? fmtMoney(v.comision):'—'}</td>
+      <td class="num" style="color:var(--money-${gananciaClass==='pos'?'pos':'neg'})">${fmtMoney(v.ganancia)}</td>
+      <td><button class="icon-btn danger" title="Eliminar" onclick="deleteVenta('${v.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 7H19M9 7V5C9 4.4 9.4 4 10 4H14C14.6 4 15 4.4 15 5V7M17 7L16.3 19C16.2 19.6 15.7 20 15.1 20H8.9C8.3 20 7.8 19.6 7.7 19L7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTablaComisiones(){
+  const tbody = document.getElementById('tablaComisiones');
+  const ventas = state.ventas.filter(v=>inPeriod(v.fecha) && v.tercerizada);
+  if(ventas.length===0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Sin ventas tercerizadas en el período</td></tr>';
+    return;
+  }
+  const porTercero = {};
+  ventas.forEach(v=>{
+    const nombre = v.tercero || 'Sin nombre';
+    if(!porTercero[nombre]) porTercero[nombre] = {ventas:0, total:0, comision:0};
+    porTercero[nombre].ventas += 1;
+    porTercero[nombre].total += v.total;
+    porTercero[nombre].comision += v.comision;
+  });
+  const filas = Object.entries(porTercero).sort((a,b)=>b[1].comision-a[1].comision);
+  tbody.innerHTML = filas.map(([nombre, d])=>`<tr>
+    <td>${escapeHtml(nombre)}</td>
+    <td class="num">${d.ventas}</td>
+    <td class="num">${fmtMoney(d.total)}</td>
+    <td class="num">${fmtMoney(d.comision)}</td>
+  </tr>`).join('');
+}
+
+function downloadCsv(filename, rows){
+  const csv = rows.map(r=>r.map(cell=>{
+    const s = String(cell===undefined||cell===null?'':cell).replaceAll('"','""');
+    return /[",\n;]/.test(s) ? `"${s}"` : s;
+  }).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('btnExportVentasCsv').addEventListener('click', ()=>{
+  const ventas = state.ventas.filter(v=>inPeriod(v.fecha));
+  const rows = [['Fecha','Producto','Cantidad','Precio unitario','Total','Tipo','Tercero','Comisión %','Comisión $','Ganancia']];
+  ventas.forEach(v=>rows.push([fmtDate(v.fecha), v.productoNombre, v.cantidad, v.precioUnitario, v.total, v.tercerizada?'tercerizada':'propia', v.tercero||'', v.comisionPct||0, v.comision||0, v.ganancia]));
+  downloadCsv('ventas_'+todayISO()+'.csv', rows);
+  showToast('CSV descargado');
+});
+
+function renderVentasStats(){
+  const ventas = state.ventas.filter(v=>inPeriod(v.fecha));
+  const totalVendido = ventas.reduce((s,v)=>s+v.total,0);
+  const gananciaTotal = ventas.reduce((s,v)=>s+v.ganancia,0);
+  const tercerizadas = ventas.filter(v=>v.tercerizada);
+  const totalTercerizado = tercerizadas.reduce((s,v)=>s+v.total,0);
+  const comisionesPagadas = tercerizadas.reduce((s,v)=>s+v.comision,0);
+
+  const cards = [
+    {label:'Total vendido', value: fmtMoney(totalVendido), cls:''},
+    {label:'Ganancia neta', value: fmtMoney(gananciaTotal), cls: gananciaTotal>=0?'pos':'neg'},
+    {label:'Ventas tercerizadas', value: fmtMoney(totalTercerizado), cls:'', hint: tercerizadas.length+' venta(s)'},
+    {label:'Comisiones pagadas', value: fmtMoney(comisionesPagadas), cls:'neg'},
+  ];
+  document.getElementById('ventasStats').innerHTML = cards.map(c=>tagCardHtml(c)).join('');
+}
+
+/* ============================================================
+   FINANZAS
+   ============================================================ */
+document.getElementById('finFecha').value = todayISO();
+const formFinanza = document.getElementById('formFinanza');
+formFinanza.addEventListener('submit', e=>{
+  e.preventDefault();
+  const fecha = document.getElementById('finFecha').value;
+  const tipo = document.getElementById('finTipo').value;
+  const concepto = document.getElementById('finConcepto').value.trim();
+  const monto = parseFloat(document.getElementById('finMonto').value)||0;
+  if(!concepto || monto<=0) return;
+  state.finanzas.unshift({id:uid(), fecha, tipo, concepto, monto});
+  saveState();
+  formFinanza.reset();
+  document.getElementById('finFecha').value = todayISO();
+  renderAll();
+  showToast('Movimiento registrado');
+});
+
+function deleteFinanza(id){
+  if(!confirm('¿Eliminar este movimiento financiero?')) return;
+  state.finanzas = state.finanzas.filter(f=>f.id!==id);
+  saveState();
+  renderAll();
+  showToast('Movimiento eliminado');
+}
+
+const finTipoMeta = {
+  ingreso:{label:'Ingreso', pill:'green', sign:1},
+  egreso:{label:'Egreso', pill:'red', sign:-1},
+  inversion:{label:'Inversión', pill:'amber', sign:-1},
+  perdida:{label:'Pérdida', pill:'red', sign:-1},
+};
+
+function renderTablaFinanzas(){
+  const tbody = document.getElementById('tablaFinanzas');
+  const movs = state.finanzas.filter(f=>inPeriod(f.fecha));
+  if(movs.length===0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Sin movimientos financieros en el período</td></tr>';
+    return;
+  }
+  tbody.innerHTML = movs.map(f=>{
+    const meta = finTipoMeta[f.tipo] || {label:f.tipo, pill:'gray', sign:1};
+    return `<tr>
+      <td class="mono">${fmtDate(f.fecha)}</td>
+      <td><span class="pill ${meta.pill}">${meta.label}</span></td>
+      <td>${escapeHtml(f.concepto)}</td>
+      <td class="num">${fmtMoney(f.monto)}</td>
+      <td><button class="icon-btn danger" title="Eliminar" onclick="deleteFinanza('${f.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 7H19M9 7V5C9 4.4 9.4 4 10 4H14C14.6 4 15 4.4 15 5V7M17 7L16.3 19C16.2 19.6 15.7 20 15.1 20H8.9C8.3 20 7.8 19.6 7.7 19L7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button></td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('btnExportFinanzasCsv').addEventListener('click', ()=>{
+  const movs = state.finanzas.filter(f=>inPeriod(f.fecha));
+  const rows = [['Fecha','Tipo','Concepto','Monto']];
+  movs.forEach(f=>rows.push([fmtDate(f.fecha), (finTipoMeta[f.tipo]||{}).label||f.tipo, f.concepto, f.monto]));
+  downloadCsv('finanzas_'+todayISO()+'.csv', rows);
+  showToast('CSV descargado');
+});
+
+function computeFinanzasResumen(){
+  const movs = state.finanzas.filter(f=>inPeriod(f.fecha));
+  const ventas = state.ventas.filter(v=>inPeriod(v.fecha));
+  const ingresos = movs.filter(f=>f.tipo==='ingreso').reduce((s,f)=>s+f.monto,0);
+  const egresos = movs.filter(f=>f.tipo==='egreso').reduce((s,f)=>s+f.monto,0);
+  const inversion = movs.filter(f=>f.tipo==='inversion').reduce((s,f)=>s+f.monto,0);
+  const perdidas = movs.filter(f=>f.tipo==='perdida').reduce((s,f)=>s+f.monto,0);
+  const gananciaVentas = ventas.reduce((s,v)=>s+v.ganancia,0);
+  const balance = ingresos + gananciaVentas - egresos - inversion - perdidas;
+  return {ingresos, egresos, inversion, perdidas, gananciaVentas, balance};
+}
+
+function shiftMonth(monthStr, delta){
+  const [y,m] = monthStr.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function computeResumenParaMes(monthStr){
+  const ventas = state.ventas.filter(v=>monthOf(v.fecha)===monthStr);
+  const movs = state.finanzas.filter(f=>monthOf(f.fecha)===monthStr);
+  const ingresos = movs.filter(f=>f.tipo==='ingreso').reduce((s,f)=>s+f.monto,0);
+  const egresos = movs.filter(f=>f.tipo==='egreso').reduce((s,f)=>s+f.monto,0);
+  const inversion = movs.filter(f=>f.tipo==='inversion').reduce((s,f)=>s+f.monto,0);
+  const perdidas = movs.filter(f=>f.tipo==='perdida').reduce((s,f)=>s+f.monto,0);
+  const gananciaVentas = ventas.reduce((s,v)=>s+v.ganancia,0);
+  const balance = ingresos + gananciaVentas - egresos - inversion - perdidas;
+  return {ingresos, egresos, inversion, perdidas, gananciaVentas, balance};
+}
+
+function deltaHtml(actual, anterior){
+  if(anterior===0 && actual===0) return '';
+  if(anterior===0) return `<span class="delta up">nuevo</span>`;
+  const pct = ((actual-anterior)/Math.abs(anterior))*100;
+  if(Math.abs(pct) < 1) return `<span class="delta flat">≈ igual que el mes pasado</span>`;
+  const cls = pct>=0 ? 'up' : 'down';
+  const flecha = pct>=0 ? '▲' : '▼';
+  return `<span class="delta ${cls}">${flecha} ${Math.abs(pct).toFixed(0)}% vs. mes anterior</span>`;
+}
+
+function renderFinStats(){
+  const r = computeFinanzasResumen();
+  const cards = [
+    {label:'Ingresos (caja)', value: fmtMoney(r.ingresos), cls:'pos'},
+    {label:'Egresos', value: fmtMoney(r.egresos), cls:'neg'},
+    {label:'Invertido', value: fmtMoney(r.inversion), cls:''},
+    {label:'Perdido', value: fmtMoney(r.perdidas), cls:'neg'},
+    {label:'Ganancia por ventas', value: fmtMoney(r.gananciaVentas), cls: r.gananciaVentas>=0?'pos':'neg'},
+    {label:'Balance neto', value: fmtMoney(r.balance), cls: r.balance>=0?'pos':'neg'},
+  ];
+  document.getElementById('finStats').innerHTML = cards.map(c=>tagCardHtml(c)).join('');
+}
+
+/* ============================================================
+   TIEMPOS
+   ============================================================ */
+document.getElementById('tFecha').value = todayISO();
+
+function horasEntre(ingreso, egreso){
+  const [ih, im] = ingreso.split(':').map(Number);
+  const [eh, em] = egreso.split(':').map(Number);
+  let mins = (eh*60+em) - (ih*60+im);
+  if(mins < 0) mins += 24*60; // cruza medianoche
+  return mins/60;
+}
+
+const formTiempo = document.getElementById('formTiempo');
+formTiempo.addEventListener('submit', e=>{
+  e.preventDefault();
+  const fecha = document.getElementById('tFecha').value;
+  const ingreso = document.getElementById('tIngreso').value;
+  const egreso = document.getElementById('tEgreso').value;
+  const tarea = document.getElementById('tTarea').value.trim();
+  if(!fecha||!ingreso||!egreso) return;
+  const horas = horasEntre(ingreso, egreso);
+  state.tiempos.unshift({id:uid(), fecha, ingreso, egreso, horas, tarea});
+  saveState();
+  formTiempo.reset();
+  document.getElementById('tFecha').value = todayISO();
+  renderAll();
+  showToast('Jornada registrada');
+});
+
+function deleteTiempo(id){
+  if(!confirm('¿Eliminar este registro de jornada?')) return;
+  state.tiempos = state.tiempos.filter(t=>t.id!==id);
+  saveState();
+  renderAll();
+  showToast('Registro eliminado');
+}
+
+function renderTablaTiempos(){
+  const tbody = document.getElementById('tablaTiempos');
+  const regs = state.tiempos.filter(t=>inPeriod(t.fecha));
+  if(regs.length===0){
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">Sin jornadas registradas en el período</td></tr>';
+    return;
+  }
+  tbody.innerHTML = regs.map(t=>`<tr>
+    <td class="mono">${fmtDate(t.fecha)}</td>
+    <td class="mono">${t.ingreso}</td>
+    <td class="mono">${t.egreso}</td>
+    <td class="num">${t.horas.toFixed(2)}</td>
+    <td>${escapeHtml(t.tarea||'—')}</td>
+    <td><button class="icon-btn danger" title="Eliminar" onclick="deleteTiempo('${t.id}')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M5 7H19M9 7V5C9 4.4 9.4 4 10 4H14C14.6 4 15 4.4 15 5V7M17 7L16.3 19C16.2 19.6 15.7 20 15.1 20H8.9C8.3 20 7.8 19.6 7.7 19L7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button></td>
+  </tr>`).join('');
+}
+
+function renderTiempoStats(){
+  const regs = state.tiempos.filter(t=>inPeriod(t.fecha));
+  const totalHoras = regs.reduce((s,t)=>s+t.horas,0);
+  const dias = new Set(regs.map(t=>t.fecha)).size;
+  const promedio = dias>0 ? totalHoras/dias : 0;
+  const cards = [
+    {label:'Horas trabajadas', value: totalHoras.toFixed(1)+' hs', cls:''},
+    {label:'Días registrados', value: String(dias), cls:''},
+    {label:'Promedio diario', value: promedio.toFixed(1)+' hs', cls:''},
+  ];
+  document.getElementById('tiempoStats').innerHTML = cards.map(c=>tagCardHtml(c)).join('');
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const valorStock = state.productos.reduce((s,p)=>s+p.costo*p.stock,0);
+  const valorStockVenta = state.productos.reduce((s,p)=>s+p.precioVenta*p.stock,0);
+  const r = computeFinanzasResumen();
+  const ventas = state.ventas.filter(v=>inPeriod(v.fecha));
+  const tercerizadas = ventas.filter(v=>v.tercerizada);
+  const totalTercerizado = tercerizadas.reduce((s,v)=>s+v.total,0);
+  const tiempos = state.tiempos.filter(t=>inPeriod(t.fecha));
+  const horas = tiempos.reduce((s,t)=>s+t.horas,0);
+  const stockBajo = state.productos.filter(p=>p.stock <= (p.stockMin||0));
+
+  const {mode, month} = getPeriod();
+  let deltaBalance = '', deltaTercerizado = '';
+  if(mode==='mes' && month){
+    const mesAnterior = shiftMonth(month, -1);
+    const rAnt = computeResumenParaMes(mesAnterior);
+    deltaBalance = deltaHtml(r.balance, rAnt.balance);
+    const tercAnt = state.ventas.filter(v=>monthOf(v.fecha)===mesAnterior && v.tercerizada).reduce((s,v)=>s+v.total,0);
+    deltaTercerizado = deltaHtml(totalTercerizado, tercAnt);
+  }
+
+  const cards = [
+    {label:'Valor del stock (costo)', value: fmtMoney(valorStock), cls:''},
+    {label:'Valor del stock (venta)', value: fmtMoney(valorStockVenta), cls:'pos', hint:'ganancia potencial: '+fmtMoney(valorStockVenta-valorStock)},
+    {label:'Balance neto', value: fmtMoney(r.balance), cls: r.balance>=0?'pos':'neg', hint: deltaBalance},
+    {label:'Ventas tercerizadas', value: fmtMoney(totalTercerizado), cls:'', hint: deltaTercerizado || (tercerizadas.length+' venta(s)')},
+    {label:'Horas trabajadas', value: horas.toFixed(1)+' hs', cls:''},
+    {label:'Productos con stock bajo', value: String(stockBajo.length), cls: stockBajo.length>0?'neg':''},
+  ];
+  document.getElementById('dashStats').innerHTML = cards.map(c=>tagCardHtml(c)).join('');
+
+  // evolución de los últimos 6 meses
+  const mesBase = (mode==='mes' && month) ? month : todayISO().slice(0,7);
+  const ultimosMeses = [];
+  for(let i=5;i>=0;i--) ultimosMeses.push(shiftMonth(mesBase, -i));
+  const datosEvolucion = ultimosMeses.map(m=>({mes:m, balance: computeResumenParaMes(m).balance}));
+  const maxEvo = Math.max(...datosEvolucion.map(d=>Math.abs(d.balance)), 1);
+  const nombresMes = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  document.getElementById('dashEvolucion').innerHTML = datosEvolucion.map(d=>{
+    const pct = Math.min(100, Math.abs(d.balance)/maxEvo*100);
+    const color = d.balance>=0 ? 'var(--money-pos)' : 'var(--money-neg)';
+    const [y,mm] = d.mes.split('-');
+    const label = nombresMes[Number(mm)-1] + ' ' + y.slice(2);
+    return `<div class="bar-row">
+      <div class="bar-label">${label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color};"></div></div>
+      <div class="bar-val">${fmtMoney(d.balance)}</div>
+    </div>`;
+  }).join('');
+
+  // barras ingresos vs egresos vs ganancia
+  const ingresosTotales = r.ingresos + r.gananciaVentas;
+  const egresosTotales = r.egresos + r.inversion + r.perdidas;
+  const maxBar = Math.max(ingresosTotales, egresosTotales, 1);
+  const bars = [
+    {label:'Ingresos', val: ingresosTotales, color:'var(--money-pos)'},
+    {label:'Egresos', val: egresosTotales, color:'var(--money-neg)'},
+    {label:'Ganancia', val: r.balance, color:'var(--accent)'},
+  ];
+  document.getElementById('dashBars').innerHTML = bars.map(b=>{
+    const pct = Math.min(100, Math.abs(b.val)/maxBar*100);
+    return `<div class="bar-row">
+      <div class="bar-label">${b.label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${b.color};"></div></div>
+      <div class="bar-val">${fmtMoney(b.val)}</div>
+    </div>`;
+  }).join('');
+
+  // stock bajo list
+  const lowEl = document.getElementById('dashLowStock');
+  if(stockBajo.length===0){
+    lowEl.innerHTML = '<div class="subtle-note">Todo el stock está por encima del mínimo. 👍</div>';
+  }else{
+    lowEl.innerHTML = stockBajo.map(p=>`
+      <div class="low-stock-item">
+        <span>${escapeHtml(p.nombre)}</span>
+        <span class="pill red">${p.stock} / mín. ${p.stockMin}</span>
+      </div>`).join('');
+  }
+
+  // últimos movimientos combinados
+  const combinados = [
+    ...ventas.map(v=>({fecha:v.fecha, tipo: v.tercerizada?'Venta (terc.)':'Venta', detalle:v.productoNombre, monto:v.total, cls:'pos'})),
+    ...state.finanzas.filter(f=>inPeriod(f.fecha)).map(f=>({fecha:f.fecha, tipo: (finTipoMeta[f.tipo]||{}).label||f.tipo, detalle:f.concepto, monto: f.monto * ((finTipoMeta[f.tipo]||{}).sign||1), cls: ((finTipoMeta[f.tipo]||{}).sign||1)>0?'pos':'neg'})),
+  ].sort((a,b)=> b.fecha.localeCompare(a.fecha)).slice(0,12);
+
+  const recentEl = document.getElementById('dashRecent');
+  if(combinados.length===0){
+    recentEl.innerHTML = '<tr class="empty-row"><td colspan="4">Todavía no hay movimientos en este período</td></tr>';
+  }else{
+    recentEl.innerHTML = combinados.map(c=>`<tr>
+      <td class="mono">${fmtDate(c.fecha)}</td>
+      <td>${escapeHtml(c.tipo)}</td>
+      <td>${escapeHtml(c.detalle||'')}</td>
+      <td class="num" style="color:${c.cls==='pos'?'var(--money-pos)':'var(--money-neg)'}">${fmtMoney(c.monto)}</td>
+    </tr>`).join('');
+  }
+}
+
+function tagCardHtml(c){
+  const clsMap = {pos:'pos', neg:'neg', '':''};
+  const cardCls = clsMap[c.cls]||'';
+  const valCls = c.cls ? c.cls : '';
+  return `<div class="tag-card ${cardCls}">
+    <div class="value ${valCls}">${c.value}</div>
+    <div class="label">${c.label}</div>
+    ${c.hint?`<div class="hint">${c.hint}</div>`:''}
+  </div>`;
+}
+
+/* ============================================================
+   SINCRONIZACIÓN (SUPABASE, OPCIONAL)
+   ============================================================ */
+const SYNC_KEY = 'deposito_sync_config';
+let syncConfig = null;
+let supabaseClient = null;
+let syncPushTimer = null;
+
+function loadSyncConfig(){
+  try{
+    const raw = localStorage.getItem(SYNC_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveSyncConfig(cfg){
+  syncConfig = cfg;
+  localStorage.setItem(SYNC_KEY, JSON.stringify(cfg));
+}
+
+function getSupabaseClient(){
+  if(!syncConfig || !syncConfig.url || !syncConfig.key) return null;
+  if(!window.supabase){ showToast('No se pudo cargar la librería de Supabase (revisá tu conexión)'); return null; }
+  if(!supabaseClient){
+    supabaseClient = window.supabase.createClient(syncConfig.url, syncConfig.key);
+  }
+  return supabaseClient;
+}
+
+function updateSyncStatusUI(){
+  const dot = document.getElementById('syncStatusDot');
+  const text = document.getElementById('syncStatusText');
+  if(!syncConfig || !syncConfig.url || !syncConfig.key || !syncConfig.codigo){
+    dot.className = 'status-dot off';
+    text.textContent = 'Sin configurar todavía — los datos quedan solo en este dispositivo';
+    return;
+  }
+  dot.className = 'status-dot on';
+  const auto = syncConfig.auto ? ' · sincronización automática activada' : '';
+  const last = syncConfig.lastSync ? ' · última vez: ' + new Date(syncConfig.lastSync).toLocaleString('es-AR') : '';
+  text.textContent = 'Conectado al espacio "' + syncConfig.codigo + '"' + auto + last;
+}
+
+async function pushToSupabase(silent){
+  const client = getSupabaseClient();
+  if(!client || !syncConfig.codigo){ if(!silent) showToast('Completá la configuración primero'); return; }
+  try{
+    const { error } = await client.from('deposito_sync').upsert({
+      id: syncConfig.codigo, data: state, updated_at: new Date().toISOString()
+    });
+    if(error) throw error;
+    syncConfig.lastSync = Date.now();
+    saveSyncConfig(syncConfig);
+    updateSyncStatusUI();
+    if(!silent) showToast('Datos subidos al servidor');
+  }catch(e){
+    console.error(e);
+    if(!silent) showToast('No se pudo subir: revisá la configuración');
+  }
+}
+
+async function pullFromSupabase(){
+  const client = getSupabaseClient();
+  if(!client || !syncConfig.codigo){ showToast('Completá la configuración primero'); return; }
+  try{
+    const { data, error } = await client.from('deposito_sync').select('data').eq('id', syncConfig.codigo).maybeSingle();
+    if(error) throw error;
+    if(!data){ showToast('Todavía no hay datos guardados con ese código'); return; }
+    if(!confirm('Esto va a reemplazar los datos de este dispositivo por los del servidor. ¿Continuar?')) return;
+    state = Object.assign(defaultState(), data.data);
+    saveState(true);
+    renderAll();
+    syncConfig.lastSync = Date.now();
+    saveSyncConfig(syncConfig);
+    updateSyncStatusUI();
+    showToast('Datos traídos del servidor');
+  }catch(e){
+    console.error(e);
+    showToast('No se pudo traer: revisá la configuración');
+  }
+}
+
+document.getElementById('formSync').addEventListener('submit', e=>{
+  e.preventDefault();
+  const url = document.getElementById('syncUrl').value.trim();
+  const key = document.getElementById('syncKey').value.trim();
+  const codigo = document.getElementById('syncCodigo').value.trim();
+  const auto = document.getElementById('syncAuto').checked;
+  if(!url || !key || !codigo){ showToast('Completá los tres campos'); return; }
+  supabaseClient = null;
+  saveSyncConfig({url, key, codigo, auto, lastSync: syncConfig?syncConfig.lastSync:null});
+  updateSyncStatusUI();
+  showToast('Configuración guardada');
+});
+
+document.getElementById('btnSyncPush').addEventListener('click', ()=>pushToSupabase(false));
+document.getElementById('btnSyncPull').addEventListener('click', ()=>pullFromSupabase());
+
+function initSyncUI(){
+  syncConfig = loadSyncConfig();
+  if(syncConfig){
+    document.getElementById('syncUrl').value = syncConfig.url||'';
+    document.getElementById('syncKey').value = syncConfig.key||'';
+    document.getElementById('syncCodigo').value = syncConfig.codigo||'';
+    document.getElementById('syncAuto').checked = !!syncConfig.auto;
+  }
+  updateSyncStatusUI();
+}
+
+/* ============================================================
+   BACKUP: EXPORTAR / IMPORTAR
+   ============================================================ */
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'backup_deposito_' + todayISO() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup descargado');
+});
+
+document.getElementById('btnImportTrigger').addEventListener('click', ()=>{
+  document.getElementById('fileImport').click();
+});
+
+document.getElementById('fileImport').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!confirm('Esto va a reemplazar todos los datos actuales por los del archivo. ¿Continuar?')) return;
+      state = Object.assign(defaultState(), data);
+      saveState();
+      renderAll();
+      showToast('Backup importado');
+    }catch(err){
+      alert('El archivo no es un backup válido.');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+function escapeHtml(str){
+  if(str===undefined || str===null) return '';
+  return String(str)
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    .replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+
+/* ============================================================
+   RENDER GENERAL
+   ============================================================ */
+function renderAll(){
+  refreshProductoSelects();
+  renderTablaProductos();
+  renderTablaMovimientos();
+  renderTablaVentas();
+  renderTablaComisiones();
+  renderVentasStats();
+  renderTablaFinanzas();
+  renderFinStats();
+  renderTablaTiempos();
+  renderTiempoStats();
+  renderDashboard();
+}
+
+initSyncUI();
+renderAll();
+</script>
+</body>
+</html>
